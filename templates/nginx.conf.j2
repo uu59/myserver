@@ -1,0 +1,100 @@
+user  nobody nogroup;
+worker_processes  auto;
+
+#error_log  logs/error.log  notice;
+error_log  logs/error.log  warn;
+
+pid /var/run/nginx.pid;
+
+
+events {
+  use epoll;
+  worker_connections 1024;
+}
+
+
+http {
+  log_format main  '"$status"\t"$request_uri"\t"$request_time"\t"$request"\t'                                                    
+    '"$bytes_sent"\t'                                                                                                            
+    '"$remote_addr"\t"$time_iso8601"\t'                                                                                          
+    '"$http_referer"\t"$http_user_agent"'                                                                                        
+  ;
+  include       mime.types;
+  default_type  application/octet-stream;
+  sendfile        on;
+  tcp_nopush     on;
+  keepalive_timeout  3;
+
+  server {
+    listen       80;
+    server_name  blog.uu59.org;
+    root /dev/null; # TODO
+    access_log /var/log/blog.uu59.org.access_log main;
+    gzip_static on; 
+    gzip_http_version   1.1;
+    gzip_proxied        expired no-cache no-store private auth;
+    gzip_disable        "msie6";
+    gzip_vary           on; 
+
+    open_file_cache max=100;
+
+    set $bot 'false';
+
+    if ($http_user_agent ~ "Baiduspider") {
+      set $bot 'true';
+    }
+
+    if ($http_user_agent ~ "Googlebot") {
+      set $bot 'true';
+    }
+
+    if ($remote_addr ~ "^150\.70\.") {
+      set $bot 'true';
+    }
+
+    if ($remote_addr = "127.0.0.1" ) {
+      set $bot 'true';
+    }
+
+    if ($remote_addr = "124.237.121.65" ) {
+      set $bot 'true';
+    }
+
+    if ($http_user_agent ~* "test") {
+      set $bot 'true';
+    }
+
+    location ~ .* {
+      if ($bot = 'true' ){
+        access_log /var/log/bot-blog.uu59.org.access_log main;
+      }
+    }
+
+    location /feed.xml {                                                                                                         
+      types {                                                                                                                    
+        application/atom+xml xml;                                                                                                
+      }                                                                                                                          
+    }
+    location ^~ /assets/ {
+      expires max;
+    }
+
+    location ^~ /static/images/ {
+      expires max;
+    }
+
+    location ~* \.css$ {
+      expires modified +14d;
+    }
+    location ~* \.(gif|jpe?g|png) {
+      expires modified +14d;
+    }
+    location /spacer.gif {
+      empty_gif;
+    }
+
+    location /empty.gif {
+      empty_gif;
+    }
+  }
+}

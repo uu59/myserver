@@ -1,0 +1,32 @@
+# ansible bug: https://github.com/ansible/ansible/issues/6387
+# - apt: name={{item}} state=present
+#   sudo: yes
+#   with_items:
+#     - libpcre3-dev
+
+- shell: |
+    sudo apt-get install -y libpcre3-dev zlib1g-dev
+
+- command: mkdir -p {{ home }}/src
+
+- get_url: url=http://nginx.org/download/nginx-{{ nginx_version }}.tar.gz
+    dest={{home}}/src/nginx-{{ nginx_version }}.tar.gz
+
+- raw: >
+    cd {{ home }}/src && tar xvf nginx-{{ nginx_version }}.tar.gz
+
+- raw: >
+    [ -x {{ nginx_bin }} ] || {
+      cd {{ home }}/src/nginx-{{ nginx_version }}
+      ./configure --with-pcre --with-http_gzip_static_module --with-http_stub_status_module 
+      make && sudo make install
+    }
+
+- raw: >
+    [ -f "/usr/local/nginx/conf/nginx.conf.bak"] || sudo cp /usr/local/nginx/conf/nginx.conf{,.bak} || true
+
+- template: src=templates/nginx.conf.j2 dest=/usr/local/nginx/conf/nginx.conf owner=root mode=0644
+  sudo: yes
+
+- template: src=templates/nginx.upstart.j2 dest=/etc/init/nginx.conf owner=root mode=0644
+  sudo: yes

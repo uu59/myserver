@@ -1,0 +1,11 @@
+- hosts: all
+  vars:
+    - nginx_version: 1.6.0
+    - nginx_bin: /usr/local/nginx/sbin/nginx
+  handlers:
+    - name: restart nginx
+      service: name=nginx state=restarted
+      sudo: yes
+  tasks:
+    # - include_vars: secrets.yml
+    - include: nginx.yml
